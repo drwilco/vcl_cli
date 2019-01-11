@@ -4,6 +4,7 @@ module VCL
     method_option :service, :aliases => ["--s"]
     method_option :version, :aliases => ["--v"]
     method_option :type, :aliases => ["--t"]
+    method_option :dynamic, :aliases => ["--d"]
     def snippet(action,name=false)
       id = VCL::Utils.parse_directory unless options[:service]
       id ||= options[:service]
@@ -16,6 +17,43 @@ module VCL
       filename = "#{name}.snippet"
 
       case action
+      when "upload"
+        abort "Must supply a snippet name as second parameter" unless name
+
+        abort "No snippet file for #{name} found locally" unless File.exists?(filename)
+
+        active_version = VCL::Fetcher.get_active_version(id)
+
+        snippets = VCL::Fetcher.get_snippets(id, active_version)
+
+        abort "No snippets found in active version" unless snippets.is_a?(Array) && snippets.length > 0
+
+        snippet = false
+        snippets.each do |s|
+          if s["name"] == name
+            abort "This command is for dynamic snippets only. Use vcl upload for versioned snippets" if s["dynamic"] == "0"
+
+            snippet = s
+          end
+        end
+
+        abort "No snippet named #{name} found on active version" unless snippet
+
+        # get the snippet from the dynamic snippet api endpoint so you have the updated content
+        snippet = VCL::Fetcher.api_request(:get, "/service/#{id}/snippet/#{snippet["id"]}")
+
+        new_content = File.read(filename)
+
+        say(VCL::Utils.get_diff(snippet["content"],new_content))
+
+        abort unless yes?("Given the above diff between the old dyanmic snippet content and the new content, are you sure you want to upload your changes? REMEMBER, THIS SNIPPET IS VERSIONLESS AND YOUR CHANGES WILL BE LIVE IMMEDIATELY!")
+
+        VCL::Fetcher.api_request(:put, "/service/#{id}/snippet/#{snippet["id"]}", {:endpoint => :api, body: {
+            content: new_content
+          }
+        })
+
+        say("New snippet content for #{name} uploaded successfully")
       when "create"
         abort "Must supply a snippet name as second parameter" unless name
 
@@ -26,7 +64,7 @@ module VCL
             name: name,
             type: options[:type] ? options[:type] : "recv",
             content: content,
-            dynamic: 0 # todo: support dynamic snippet creation/updating
+            dynamic: options.key?(:dynamic) ? 1 : 0
           }
         })
         say("#{name} created on #{id} version #{version}")

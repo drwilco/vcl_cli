@@ -234,6 +234,7 @@ vcl snippet [action] [snippet_name]
 
 Available Actions:
   * create: Create a new snippet
+  * upload: Upload a specific dynamic snippet
   * delete: Delete a snippet
   * list: List all snippets
 
@@ -241,6 +242,7 @@ Flags:
   * --s: The service ID to use. Current working directory is assumed.
   * --v: The version to use. Latest writable version is assumed.
   * --t: The type of snippet to create. Types are named after subroutines--for instance a snippet for `vcl_recv` would be of type `recv`. Use `init` for snippets outside of a subroutine.
+  * --d: When used with the create command, specifies that the snippet should be dynamic.
 
 ### token
 

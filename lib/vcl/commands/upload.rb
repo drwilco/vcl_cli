@@ -53,6 +53,11 @@ module VCL
         next unless snippets.has_key? s["name"]
         diff = VCL::Utils.get_diff(s["content"], snippets[s["name"]]["content"])
 
+        if s["dynamic"] == "1"
+          snippets[s["name"]]["skip_because_dynamic"] = true
+          next
+        end
+
         snippets[s["name"]]["matched"] = true
         snippets[s["name"]]["diff_length"] = diff.length
 
@@ -64,6 +69,11 @@ module VCL
       old_snippets_writable.each do |s|
         next unless snippets.has_key? s["name"]
         next if (old_snippets.select {|os| os["name"] == s["name"]}).length > 0
+
+        if s["dynamic"] == "1"
+          snippets[s["name"]]["skip_because_dynamic"] = true
+          next
+        end
 
         snippets[s["name"]]["matched"] = true
         snippets[s["name"]]["diff_length"] = 3
@@ -106,8 +116,12 @@ module VCL
             true
           end
         else
-          say("Not uploading #{s["name"]} because it does not exist on the service. Use the \"snippet create\" command to create it.")
-          true
+          if s.key?("skip_because_dynamic")
+            true
+          else
+            say("Not uploading #{s["name"]} because it does not exist on the service. Use the \"snippet create\" command to create it.")
+            true
+          end
         end
       end
 
